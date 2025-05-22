@@ -6,19 +6,54 @@
 
 generator client {
   provider = "prisma-client-js"
-  output   = "../generated/prisma"
 }
 
 datasource db {
-  provider = "mongodb"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  email     String   @unique
-  name      String?
-  birthYear Int?
+model Users {
+  id        String     @id @default(cuid())
+  name      String
+  username  String     @unique
+  email     String     @unique
+  password  String
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  shortUrls ShortUrl[]
+
+  @@map("users")
+}
+
+model ShortUrl {
+  id        String   @id @default(cuid())
+  fullUrl   String
+  shortUrl  String   @unique
+  clicks    Int      @default(0)
+  userId    String?
+  user      Users?   @relation(fields: [userId], references: [id])
+  Click     Click[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@map("short_urls")
+}
+
+model Click {
+  id         String   @id @default(cuid())
+  shortUrl   ShortUrl @relation(fields: [shortUrlId], references: [id])
+  shortUrlId String
+  ip         String?
+  userAgent  String?
+  referrer   String?
+  country    String?
+  city       String?
+  region     String?
+  latitude   Float?
+  longitude  Float?
+  updatedAt  DateTime @updatedAt
+  createdAt  DateTime @default(now())
+
+  @@map("clicks")
 }

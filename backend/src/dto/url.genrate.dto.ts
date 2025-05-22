@@ -1,7 +1,7 @@
-import { IsString, IsUrl } from "class-validator";
+import { IsString, IsUrl } from 'class-validator';
 
 export class GenerateUrlDto {
-    @IsString()
-    @IsUrl()
-    url: string;
+  @IsString()
+  @IsUrl()
+  url: string;
 }
