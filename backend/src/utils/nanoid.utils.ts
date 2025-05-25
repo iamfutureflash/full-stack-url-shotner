@@ -1,5 +1,5 @@
 import { nanoid } from 'nanoid';
 
-export const generateNanoId = ({ length }: { length: number }): string => {
-  return nanoid(length);
+export const generateNanoId = ({ length }: { length?: number }): string => {
+  return nanoid(length ?? 7);
 };

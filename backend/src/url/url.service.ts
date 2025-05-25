@@ -15,7 +15,7 @@ export class UrlService {
   }): Promise<Prisma.ShortUrlCreateInput> {
     try {
       console.log('url', url);
-      const shortId = generateNanoId({ length: 7 });
+      const shortId = generateNanoId({});
       console.log('shortId', shortId);
       const created = await this.prismaService.shortUrl.create({
         data: {
