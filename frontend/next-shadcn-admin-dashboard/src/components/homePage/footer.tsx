@@ -7,8 +7,8 @@ import Link from "next/link";
 import { ArrowUp, Facebook, Instagram, Linkedin, Twitter } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { SniprLogo } from "./snipr-logo";
 
+import { SniprLogo } from "./snipr-logo";
 
 export function Footer() {
   const [showScrollTop, setShowScrollTop] = useState(false);
