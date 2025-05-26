@@ -1,8 +1,7 @@
 import { Injectable } from '@nestjs/common';
 
-import { PrismaService } from 'src/prisma/prisma.service';
 import { GenerateUrlDto } from 'src/dto/url.genrate.dto';
-import { Prisma } from '@prisma/client';
+import { PrismaService } from 'src/prisma/prisma.service';
 import { generateNanoId } from 'src/utils/nanoid.utils';
 @Injectable()
 export class UrlService {
@@ -12,7 +11,7 @@ export class UrlService {
     generateUrlDto: { url },
   }: {
     generateUrlDto: GenerateUrlDto;
-  }): Promise<Prisma.ShortUrlCreateInput> {
+  }): Promise<string> {
     try {
       console.log('url', url);
       const shortId = generateNanoId({});
@@ -24,7 +23,7 @@ export class UrlService {
         },
       });
       console.log('shortUrl', created);
-      return created;
+      return `${process.env.APP_URL}${created.shortUrl}`;
     } catch (error) {
       console.log('Error generating URL:', error);
       throw new Error('Failed to generate URL');
@@ -44,14 +43,20 @@ export class UrlService {
 
   async findSortUrl({ shortUrlID }: { shortUrlID: string }): Promise<string> {
     try {
-      const shortUrl = await this.prismaService.shortUrl.findUnique({
-        where: { shortUrl: shortUrlID },
+      const result = await this.prismaService.$transaction(async (prisma) => {
+        const shortUrl = await prisma.shortUrl.findUnique({
+          where: { shortUrl: shortUrlID },
+        });
+        if (!shortUrl) {
+          throw new Error('Short URL not found');
+        }
+        await prisma.shortUrl.update({
+          where: { shortUrl: shortUrlID },
+          data: { clicks: { increment: 1 } },
+        });
+        return shortUrl.fullUrl;
       });
-      if (!shortUrl) {
-        throw new Error('Short URL not found');
-      }
-      console.log('Found URL:', shortUrl);
-      return shortUrl.fullUrl;
+      return result;
     } catch (error) {
       console.log('Error finding URL:', error);
       throw new Error('Failed to find URL');

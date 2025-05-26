@@ -1,9 +1,16 @@
+"use client";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowRight, Play, Star } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import useUrlShortner from "@/hooks/use-url-shortner";
+import { useState } from "react";
+import Link from "next/link";
 
 export function HeroSection() {
   return (
@@ -23,8 +30,8 @@ export function HeroSection() {
 
           {/* Main headline */}
           <h1 className="mb-6 text-5xl leading-tight font-bold text-gray-900 md:text-7xl">
-            Shorten links,
-            <span className="bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-transparent"> amplify </span>
+            Shorten links,{" "}
+            <span className="bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-transparent">amplify</span>{" "}
             results
           </h1>
 
@@ -37,16 +44,7 @@ export function HeroSection() {
           {/* URL shortener form */}
           <Card className="mx-auto mb-12 max-w-2xl border-0 bg-white/80 shadow-xl backdrop-blur-sm">
             <CardContent className="p-6">
-              <div className="flex flex-col gap-4 md:flex-row">
-                <Input
-                  placeholder="Paste your long URL here"
-                  className="h-14 border-gray-200 text-lg focus:border-orange-500 focus:ring-orange-500"
-                />
-                <Button className="h-14 bg-gradient-to-r from-orange-500 to-red-500 px-8 text-lg font-semibold hover:from-orange-600 hover:to-red-600">
-                  Shorten for free
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </Button>
-              </div>
+              <URLForm />
               <p className="mt-4 text-sm text-gray-500">
                 By clicking &quot;Shorten for free&quot; you agree to Snipr&apos;s Terms of Service and Privacy Policy
               </p>
@@ -84,3 +82,60 @@ export function HeroSection() {
     </section>
   );
 }
+
+const urlSchema = z.object({
+  url: z.string().url({ message: "Please enter a valid URL" }),
+});
+type UrlFormValues = z.infer<typeof urlSchema>;
+
+const URLForm = () => {
+  const [ShortUrl, setShortUrl] = useState("");
+  const { createSortUrl } = useUrlShortner();
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+    reset,
+  } = useForm<UrlFormValues>({
+    resolver: zodResolver(urlSchema),
+  });
+
+  const onSubmit = async (data: UrlFormValues) => {
+    try {
+      const shortUrl = await createSortUrl({ url: data.url });
+      setShortUrl(shortUrl.data);
+      reset();
+    } catch (error) {
+      // Optionally handle error (show toast, etc)
+      console.error(error);
+    }
+  };
+
+  return (
+    <>
+      <form onSubmit={handleSubmit(onSubmit)} className="flex w-full flex-col gap-4 md:flex-row">
+        <div className="flex-1">
+          <Input
+            {...register("url")}
+            placeholder="Paste your long URL here"
+            className="h-14 w-full border-gray-200 text-lg focus:border-orange-500 focus:ring-orange-500"
+            disabled={isSubmitting}
+          />
+          {errors.url && <p className="mt-1 text-sm text-red-500">{errors.url.message}</p>}
+        </div>
+        <Button
+          type="submit"
+          className="h-14 bg-gradient-to-r from-orange-500 to-red-500 px-8 text-lg font-semibold hover:from-orange-600 hover:to-red-600"
+          disabled={isSubmitting}
+        >
+          Shorten for free
+          <ArrowRight className="ml-2 h-5 w-5" />
+        </Button>
+      </form>
+      <Link href={ShortUrl} target="_blank" className="mt-4 text-blue-600 hover:underline">
+        {ShortUrl}
+      </Link>
+    </>
+  );
+};
