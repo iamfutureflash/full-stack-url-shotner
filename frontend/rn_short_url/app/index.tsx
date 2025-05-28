@@ -9,6 +9,7 @@ import {
   FlatList,
   Linking,
   SafeAreaView,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -25,7 +26,7 @@ interface UrlData {
 }
 
 export default function Home() {
-  const [url, setUrl] = useState<UrlData[] | []>([]);
+  const [url, setUrls] = useState<UrlData[] | []>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -52,7 +53,7 @@ export default function Home() {
   const fetchSHortUrls = async () => {
     try {
       const response = await axios.get("http://192.168.29.70:3000/url");
-      setUrl(response.data);
+      setUrls(response.data);
       // console.log(response.data);
     } catch (error) {
       console.error("Error fetching short URLs:", error);
@@ -139,29 +140,84 @@ export default function Home() {
     </View>
   );
 
+  const handleAddUrl = async ({ url }: { url: string }) => {
+    setLoading(true);
+    try {
+      // Replace this with your actual API call
+      const response = await axios.post("http://192.168.29.70:3000/url", {
+        url,
+      });
+      if (response.status === 201) {
+        const newUrl = await response.data;
+        console.log("New short URL created:", newUrl);
+        Alert.alert("Success", "Short URL created successfully");
+        // setUrls((prevUrls) => [newUrl, ...prevUrls]);
+        fetchSHortUrls();
+      }
+    } catch (error) {
+      console.error("Error creating short URL:", error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <SafeAreaView>
-      <Text className="text-center font-bold text-xl mt-4">My Urls</Text>
-      <TouchableOpacity
-        className="py-2 bg-[#667eea] rounded-xl flex flex-row justify-center items-center elevation shadow-black text-white"
-        onPress={() => setModalVisible(true)}
-      >
-        <Text className="text-white">Add</Text>
-        <Ionicons name="add" size={24} color="#fff" />
-      </TouchableOpacity>
+    <>
+      <AddUrlModal
+        visible={modalVisible}
+        onClose={() => {
+          setModalVisible(false);
+        }}
+        onSubmit={handleAddUrl}
+        loading={loading}
+      />
+      <SafeAreaView className="mx-4">
+        <ScrollView>
+          <Text className="mt-4 text-xl font-bold text-center">My Urls</Text>
+          <TouchableOpacity
+            className="py-2 bg-[#667eea] rounded-xl flex flex-row justify-center items-center elevation shadow-black text-white"
+            onPress={() => setModalVisible(true)}
+          >
+            <Text className="text-white">Add</Text>
+            <Ionicons name="add" size={24} color="#fff" />
+          </TouchableOpacity>
 
-      <View className="flex flex-col justify-center items-center  mx-4 py-6">
-        <FlatList
-          data={url}
-          keyExtractor={(item) => item.id}
-          renderItem={renderItem}
-          ListEmptyComponent={EmptyComponent}
-        />
-
-        <Link href={"/about"}>About</Link>
-        <Link href={"/profile"}>Profile</Link>
-      </View>
-    </SafeAreaView>
+          <View className="">
+            <FlatList
+              data={url}
+              keyExtractor={(item) => item.id}
+              renderItem={renderItem}
+              ListEmptyComponent={EmptyComponent}
+            />
+            <View className="flex-col justify-start gap-4 my-6">
+              <Link
+                href={"/about"}
+                className="px-4 py-4 font-bold text-center text-white bg-red-400 rounded-xl"
+              >
+                <View className="flex-row items-center justify-center gap-2">
+                  <Text className="font-bold text-center text-white bg-red-400 rounded-xl">
+                    About
+                  </Text>
+                  <Ionicons name="open" size={20} color="#fff" />
+                </View>
+              </Link>
+              <Link
+                href={"/profile"}
+                className="px-4 py-4 font-bold text-center text-white bg-red-400 rounded-xl"
+              >
+                <View className="flex-row items-center justify-center gap-2">
+                  <Text className="font-bold text-center text-white bg-red-400 rounded-xl">
+                    Profile
+                  </Text>
+                  <Ionicons name="open" size={20} color="#fff" />
+                </View>
+              </Link>
+            </View>
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    </>
   );
 }
 

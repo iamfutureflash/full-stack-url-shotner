@@ -1,33 +1,236 @@
-import { Dimensions, Modal, StyleSheet, Text, View } from "react-native";
 import React from "react";
+import {
+  Modal,
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  Dimensions,
+  KeyboardAvoidingView,
+  Platform,
+  Alert,
+  ActivityIndicator,
+} from "react-native";
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 
 const { width, height } = Dimensions.get("window");
 
-export default function AddUrlModal({
-  isVisible = false,
+// Zod schema for URL validation
+const urlSchema = z.object({
+  fullUrl: z
+    .string()
+    .min(1, "URL is required")
+    .url("Please enter a valid URL")
+    .refine((url) => {
+      try {
+        const parsedUrl = new URL(url);
+        return ["http:", "https:"].includes(parsedUrl.protocol);
+      } catch {
+        return false;
+      }
+    }, "URL must start with http:// or https://"),
+});
+
+const AddUrlModal = ({
+  visible,
   onClose,
+  onSubmit,
+  loading = false,
 }: {
-  isVisible: boolean;
+  visible: boolean;
   onClose: () => void;
-}) {
+  onSubmit: ({ url }: { url: string }) => Promise<void>;
+  loading: boolean;
+}) => {
+  const {
+    control,
+    handleSubmit,
+    formState: { errors, isValid },
+    reset,
+    watch,
+  } = useForm({
+    resolver: zodResolver(urlSchema),
+    mode: "onChange",
+    defaultValues: {
+      fullUrl: "",
+    },
+  });
+
+  const watchedUrl = watch("fullUrl");
+
+  const onSubmitForm = async (data: any) => {
+    try {
+      console.log("Submitting URL:", data);
+      await onSubmit({ url: data.fullUrl });
+      reset();
+      onClose();
+    } catch (error) {
+      Alert.alert("Error", "Failed to create short URL. Please try again.");
+    }
+  };
+
   const handleClose = () => {
-    // reset();
+    reset();
     onClose();
+  };
+
+  const getDomainFromUrl = (url: string) => {
+    try {
+      return new URL(url).hostname;
+    } catch {
+      return "";
+    }
   };
 
   return (
     <Modal
-      visible={isVisible}
+      visible={visible}
+      transparent
       animationType="fade"
       onRequestClose={handleClose}
-      //   transparent
     >
-      <View>
-        <Text>AddUrlModal</Text>
+      <View style={styles.overlay}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.keyboardView}
+        >
+          <View style={styles.modalContainer}>
+            <LinearGradient
+              colors={["#667eea", "#764ba2"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.gradientContainer}
+            >
+              {/* Header */}
+              <View style={styles.header}>
+                <View style={styles.headerLeft}>
+                  <View style={styles.iconContainer}>
+                    <Ionicons name="link" size={24} color="#fff" />
+                  </View>
+                  <Text style={styles.title}>Create Short URL</Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.closeButton}
+                  onPress={handleClose}
+                  disabled={loading}
+                >
+                  <Ionicons name="close" size={24} color="#fff" />
+                </TouchableOpacity>
+              </View>
+
+              {/* Form */}
+              <View style={styles.formContainer}>
+                <Text style={styles.label}>Enter URL to shorten</Text>
+
+                <Controller
+                  control={control}
+                  name="fullUrl"
+                  render={({ field: { onChange, onBlur, value } }) => (
+                    <View style={styles.inputContainer}>
+                      <View style={styles.inputWrapper}>
+                        <Ionicons
+                          name="globe-outline"
+                          size={20}
+                          color={errors.fullUrl ? "#ef4444" : "#9ca3af"}
+                          style={styles.inputIcon}
+                        />
+                        <TextInput
+                          style={[
+                            styles.textInput,
+                            errors.fullUrl && styles.textInputError,
+                          ]}
+                          placeholder="https://example.com"
+                          placeholderTextColor="#9ca3af"
+                          value={value}
+                          onChangeText={onChange}
+                          onBlur={onBlur}
+                          autoCapitalize="none"
+                          autoCorrect={false}
+                          keyboardType="url"
+                          returnKeyType="done"
+                          onSubmitEditing={handleSubmit(onSubmitForm)}
+                          editable={!loading}
+                        />
+                        {value && !errors.fullUrl && (
+                          <Ionicons
+                            name="checkmark-circle"
+                            size={20}
+                            color="#10b981"
+                            style={styles.validIcon}
+                          />
+                        )}
+                      </View>
+
+                      {errors.fullUrl && (
+                        <View style={styles.errorContainer}>
+                          <Ionicons
+                            name="alert-circle"
+                            size={16}
+                            color="#ef4444"
+                          />
+                          <Text style={styles.errorText}>
+                            {errors.fullUrl.message}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                  )}
+                />
+
+                {/* URL Preview */}
+                {watchedUrl && !errors.fullUrl && (
+                  <View style={styles.previewContainer}>
+                    <Text style={styles.previewLabel}>Preview:</Text>
+                    <View style={styles.previewCard}>
+                      <Ionicons name="earth" size={16} color="#6366f1" />
+                      <Text style={styles.previewDomain}>
+                        {getDomainFromUrl(watchedUrl)}
+                      </Text>
+                    </View>
+                  </View>
+                )}
+
+                {/* Buttons */}
+                <View style={styles.buttonContainer}>
+                  <TouchableOpacity
+                    style={styles.cancelButton}
+                    onPress={handleClose}
+                    disabled={loading}
+                  >
+                    <Text style={styles.cancelButtonText}>Cancel</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[
+                      styles.submitButton,
+                      (!isValid || loading) && styles.submitButtonDisabled,
+                    ]}
+                    onPress={handleSubmit(onSubmitForm)}
+                    disabled={!isValid || loading}
+                  >
+                    {loading ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <>
+                        <Ionicons name="add" size={20} color="#fff" />
+                        <Text style={styles.submitButtonText}>Create</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </LinearGradient>
+          </View>
+        </KeyboardAvoidingView>
       </View>
     </Modal>
   );
-}
+};
 
 const styles = StyleSheet.create({
   overlay: {
@@ -199,3 +402,5 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
 });
+
+export default AddUrlModal;
